@@ -8,3 +8,10 @@ frames/
 output/
 build/
 dist/
+videos/
+*.csv
+
+#===================
+# Jetbrains IDE
+#===================
+.idea/

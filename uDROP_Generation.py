@@ -23,6 +23,7 @@ matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
 import math
+from pathlib import Path
 
 
 
@@ -33,9 +34,13 @@ class SetupGUI:
 	def __init__(self,vid_path):
 		"""Set up the GUI"""
 
-		self.vid_path = vid_path
+		if vid_path != "":
+			self.vid_path = self.filterVideo(vid_path)
+		else:
+			self.vid_path = vid_path
+
 		#Run the ffmpeg command in console
-		self.makeFrames(vid_path)
+		self.makeFrames(self.vid_path)
 
 		#Init user selections
 		self.bound_top_left = [-1,-1]
@@ -119,6 +124,39 @@ class SetupGUI:
 
 		self.root.mainloop()
 
+
+	def filterVideo(self,vid_path):
+
+		if not os.path.exists("videos/"):
+			os.mkdir('videos/')
+
+		cap = cv2.VideoCapture(vid_path)
+
+		out_vid_path = Path("videos/out.mp4")
+		print("OUT VIDEO PATH: " + str(out_vid_path))
+
+		video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+		video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+		fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+		out = cv2.VideoWriter(str(out_vid_path), fourcc, 30, (video_width, video_height))
+
+		while cap.isOpened():
+			try:
+				ret, frame = cap.read()
+				_, threshold = cv2.threshold(frame, 110, 200, cv2.THRESH_BINARY)
+				cv2.imshow("threshold", threshold)
+				out.write(threshold)
+				if cv2.waitKey(1) & 0xFF == ord('q'):
+					break
+			except Exception as e:
+				print("Finished processing video.")
+				break
+
+		cap.release()
+		out.release()
+		cv2.destroyAllWindows()
+		return str(out_vid_path)
 
 
 	def makeFrames(self,vid_path):
