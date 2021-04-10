@@ -31,10 +31,10 @@ from pathlib import Path
 class SetupGUI:
 	"""Class to display uDROP setup"""
 
-	def __init__(self,vid_path):
+	def __init__(self,vid_path,opts):
 		"""Set up the GUI"""
 
-		if vid_path != "":
+		if vid_path != "" and opts == "filter":
 			self.vid_path = self.filterVideo(vid_path)
 		else:
 			self.vid_path = vid_path
@@ -132,19 +132,24 @@ class SetupGUI:
 
 		cap = cv2.VideoCapture(vid_path)
 
+		fps = cap.get(cv2.CAP_PROP_FPS)
+		frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+		print("fps: " + str(fps) + " frame count: " + str(frames))
+
 		out_vid_path = Path("videos/out.mp4")
-		print("OUT VIDEO PATH: " + str(out_vid_path))
 
 		video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 		video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 		fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-		out = cv2.VideoWriter(str(out_vid_path), fourcc, 30, (video_width, video_height))
+		out = cv2.VideoWriter(str(out_vid_path), fourcc, fps, (video_width, video_height))
 
 		while cap.isOpened():
 			try:
 				ret, frame = cap.read()
-				_, threshold = cv2.threshold(frame, 110, 200, cv2.THRESH_BINARY)
+				# _, threshold = cv2.threshold(frame, 110, 200, cv2.THRESH_BINARY) # works fine
+				_, threshold = cv2.threshold(frame, 125, 230, cv2.THRESH_TRUNC) # pretty good
+				# _, threshold = cv2.threshold(frame, 100, 200, cv2.THRESH_TOZERO) # not good
 				cv2.imshow("threshold", threshold)
 				out.write(threshold)
 				if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -979,4 +984,4 @@ class AnalysisGUI:
 
 
 #Commands to run when script is called
-SetupGUI(sys.argv[1] if len(sys.argv)>1 else "")
+SetupGUI(sys.argv[1] if len(sys.argv)>1 else "", sys.argv[2] if len(sys.argv)>2 else "")
