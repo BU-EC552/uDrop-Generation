@@ -31,11 +31,11 @@ from pathlib import Path
 class SetupGUI:
 	"""Class to display uDROP setup"""
 
-	def __init__(self,vid_path,opts):
+	def __init__(self,vid_path,opts,filter_opt):
 		"""Set up the GUI"""
 
 		if vid_path != "" and opts == "filter":
-			self.vid_path = self.filterVideo(vid_path)
+			self.vid_path = self.filterVideo(vid_path, filter_opt)
 		else:
 			self.vid_path = vid_path
 
@@ -125,7 +125,7 @@ class SetupGUI:
 		self.root.mainloop()
 
 
-	def filterVideo(self,vid_path):
+	def filterVideo(self,vid_path, filter_opt):
 
 		if not os.path.exists("videos/"):
 			os.mkdir('videos/')
@@ -147,9 +147,14 @@ class SetupGUI:
 		while cap.isOpened():
 			try:
 				ret, frame = cap.read()
-				# _, threshold = cv2.threshold(frame, 110, 200, cv2.THRESH_BINARY) # works fine
-				_, threshold = cv2.threshold(frame, 125, 230, cv2.THRESH_TRUNC) # pretty good
-				# _, threshold = cv2.threshold(frame, 100, 200, cv2.THRESH_TOZERO) # not good
+				if filter_opt == "truncate":
+					_, threshold = cv2.threshold(frame, 125, 230, cv2.THRESH_TRUNC)
+				elif filter_opt =="binary":
+					_, threshold = cv2.threshold(frame, 110, 200, cv2.THRESH_BINARY)
+				elif filter_opt == "tozero":
+					_, threshold = cv2.threshold(frame, 100, 200, cv2.THRESH_TOZERO)
+				else:
+					_, threshold = cv2.threshold(frame, 125, 230, cv2.THRESH_TRUNC)
 				cv2.imshow("threshold", threshold)
 				out.write(threshold)
 				if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -984,4 +989,4 @@ class AnalysisGUI:
 
 
 #Commands to run when script is called
-SetupGUI(sys.argv[1] if len(sys.argv)>1 else "", sys.argv[2] if len(sys.argv)>2 else "")
+SetupGUI(sys.argv[1] if len(sys.argv)>1 else "", sys.argv[2] if len(sys.argv)>2 else "", sys.argv[3] if len(sys.argv)>3 else "")
