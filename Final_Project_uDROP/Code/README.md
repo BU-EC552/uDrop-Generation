@@ -30,9 +30,9 @@ The BibTex is included here:
 * Install pipenv with the following command:
   * ```sudo python3 -m pip install pipenv```
 * Clone this repo into your local files
-  *  ```git clone https://github.com/CIDARLAB/uDrop-Generation.git```
+  *  ```git clone `https://github.com/liben002/uDrop-Generation.git``
 * Navigate to the directory
-  * ```cd uDrop-Generation/```
+  * ```cd uDrop-Generation/Final_Project_uDROP/Code/```
 * Now, install the dependencies into the virtual environment:
   * ```pipenv shell```
   * ```pipenv install```
@@ -45,15 +45,15 @@ The BibTex is included here:
 * Install pipenv with the following command:
   * ```sudo python3 -m pip install pipenv```
 * Clone this repo into your local files
-  *  ```git clone https://github.com/CIDARLAB/uDrop-Generation.git```
+  *  ```git clone https://github.com/liben002/uDrop-Generation.git```
 * Navigate to the directory
-  * ```cd uDrop-Generation/```
+  * ```cd uDrop-Generation/Final_Project_uDROP/Code/```
 * Now, install the dependencies into the virtual environment:
   * ```pipenv shell```
   * ```pipenv install```
  
 # Quick-start
-* cd to the locally cloned repository
+* cd to the Code/ folder of the locally cloned repository
 * Type in ```pipenv shell``` to activate your local virtual environment (if you are not already in a shell
 * Type in ```python3 uDROP_Generation.py /path/to/video.mpg```
 * The GUI will appear
