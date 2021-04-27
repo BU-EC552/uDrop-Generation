@@ -31,13 +31,18 @@ from pathlib import Path
 class SetupGUI:
 	"""Class to display uDROP setup"""
 
-	def __init__(self,vid_path,opts,filter_opt):
+	def __init__(self,vid_path,opts,filter_opt,finetune_opt):
 		"""Set up the GUI"""
 
 		if vid_path != "" and opts == "filter":
 			self.vid_path = self.filterVideo(vid_path, filter_opt)
 		else:
 			self.vid_path = vid_path
+
+		if finetune_opt != "" and finetune_opt == "edge_fine_tune":
+			self.finetune = True 
+		else:
+			self.finetune = False 
 
 		#Run the ffmpeg command in console
 		self.makeFrames(self.vid_path)
@@ -136,7 +141,7 @@ class SetupGUI:
 		frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 		print("fps: " + str(fps) + " frame count: " + str(frames))
 
-		out_vid_path = Path("videos/out.mp4")
+		out_vid_path = Path("videos/out_"+filter_opt+".mp4")
 
 		video_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 		video_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -275,7 +280,7 @@ class SetupGUI:
 		self.root.destroy()
 
 		#Run the analysis
-		analysis = Analysis(fps, conversion_factor, start_x, start_y, width,height, self.frame_list, self.vid_path)
+		analysis = Analysis(fps, conversion_factor, start_x, start_y, width,height, self.frame_list, self.vid_path,self.finetune)
 
 		#Display the analysis GUI
 		analysis_gui = AnalysisGUI(analysis)
@@ -370,7 +375,7 @@ class SetupGUI:
 
 class Analysis:	
 	"""Backend class for all our video processing"""
-	def __init__(self,fps,conversion_factor,start_x,start_y,width,height,frame_list,vid_name):
+	def __init__(self,fps,conversion_factor,start_x,start_y,width,height,frame_list,vid_name,finetune):
 		"""Initialize the analysis with the user inputted data"""		
 		self.fps = fps
 		self.conversion_factor = conversion_factor
@@ -380,6 +385,7 @@ class Analysis:
 		self.height = height
 		self.frame_list = frame_list
 		self.vid_name = vid_name
+		self.finetune = finetune
 		self.defaultParams()
 		self.runAnalysis()
 
@@ -401,12 +407,30 @@ class Analysis:
 	def runAnalysis(self):
 		"""Run the video processing algorithm"""
 		self.resetOutputDir()
+		print("Original Canny Weights: " + str(self.canny_weights[0]) + " " + str(self.canny_weights[1])) 
 		self.createWave()
+		# While loop that prevents program from crashing by lowering the edge detection thresholds. 
+		loopcount = 0
+		frame_sum_avg_pixel_thresh = 0.9 # threshold for sum average/ frame count
+		weight_factor = 0.9 # factor * canny weights = new canny weights
+		while (sum(self.avg_pixel_vals)/len(self.frame_list)) < (frame_sum_avg_pixel_thresh) and loopcount < 12:
+			#update weights 
+			self.canny_weights = [round(self.canny_weights[0]*weight_factor,3),
+								  round(self.canny_weights[1]*weight_factor,3)]
+			print("Updated Canny Weights: " + str(self.canny_weights[0]) + " " + str(self.canny_weights[1]))
+			#rerun create wave after each update
+			self.createWave()
+			loopcount += 1
 		self.smoothWave()
 		self.getWaveMaxes()
 		self.getDropRate()
 		self.getAllDiameters()
 		self.writeOutputs()
+		# Optional fine tuning of edge detection thresholds 
+		if (self.finetune == True):
+			print(" ")
+			self.edge_fine_tuning(4,2) 
+
 
 	def resetOutputDir(self):
 		"""Clear the output directory if it exists and populate it with empty folders"""
@@ -450,12 +474,11 @@ class Analysis:
 			Image.fromarray(arr).save("output/edge/"+str(i)+"edge"+".png")
 
 			this_avg = numpy.mean(arr);
-			self.avg_pixel_vals.append(this_avg)
+			self.avg_pixel_vals.append(this_avg) 
 			
 			with open("output/sin.csv","a") as fout:
 				fout.write(str(count)+","+str(this_avg)+"\n")
 			count+=1
-
 
 
 
@@ -596,18 +619,70 @@ class Analysis:
 		with open("output/drop_data.csv","w") as f:
 			f.write(str(drop_diameters_np.mean())+"," + str(drop_diameters_np.mean()*self.conversion_factor) + "," + str(drop_diameters_np.std()) + "," + str(drop_diameters_np.std()*self.conversion_factor) + "," + str(self.drops_per_second) + "\n")
 
-
 		with open("output/drop_data_raw.csv","w") as f:
 			f.write(",".join([str(x) for x in drop_diameters_np]) + "\n")
 
 		with open("./drop_data.csv","a") as f:
-			f.write(self.vid_name + "," + str(self.drops_per_second)+","+str(drop_diameters_np.mean()*(self.conversion_factor)) + "," + str(drop_diameters_np.std()*(self.conversion_factor)) + "," + str(drop_diameters_np.size)+"\n")
+			f.write(self.vid_name + "," + str(self.canny_weights[0]) + "," + str(self.canny_weights[1]) + "," + str(self.drops_per_second)+ "," + str(drop_diameters_np.mean()) + "," + str(drop_diameters_np.std()) + "," + str(drop_diameters_np.mean()*(self.conversion_factor)) + "," + str(drop_diameters_np.std()*(self.conversion_factor)) + "," + str(drop_diameters_np.size)+"\n")
 
 		with open("./drop_diams_pixels.csv","a") as f:
 			f.write(self.vid_name + "," + ",".join([str(x) for x in drop_diameters_np]) + "\n")
 
 		with open("./drop_diams_um.csv","a") as f:
 			f.write(self.vid_name + "," + ",".join([str(x) for x in drop_diameters_np*self.conversion_factor]) + "\n")
+
+
+	def edge_fine_tuning(self,matrix_range,max_std):
+		"""Fine tune the edge detection thresholds"""
+		print('Performing Edge Detection Threshold Fine Tuning: ')
+		self.canny_data = []
+		drop_diameters_np = numpy.asarray(self.drop_diameters)
+		self.canny_data.append([self.canny_weights[0],self.canny_weights[1],drop_diameters_np.mean(),drop_diameters_np.std()]) 
+		if(os.path.exists("pre_finetune_output/")):
+			shutil.rmtree('pre_finetune_output/')
+		shutil.copytree('output/','pre_finetune_output/')
+		og_cannys = self.canny_weights
+		my_drop_diameters_avg = []
+		my_drop_diameters_std = [] 
+		l_count = 0
+		#Loop that iterates through changes on the threshold values 
+		for y in range(matrix_range):
+			self.canny_weights = [int(self.canny_weights[0])-1.0,og_cannys[1]]
+			for x in range(matrix_range):
+				self.canny_weights=[self.canny_weights[0],int(self.canny_weights[1])-1.0]
+				print("Iteration " + str(l_count+1) + " Fine-Tuned Canny Weights: " + str(self.canny_weights[0]) + " " + str(self.canny_weights[1]))
+				self.createWave()
+				self.smoothWave()
+				self.getWaveMaxes()
+				self.getDropRate()
+				self.getAllDiameters()
+				self.writeOutputs()
+				drop_diameters_np = numpy.asarray(self.drop_diameters)
+				self.canny_data.append([self.canny_weights[0],self.canny_weights[1],drop_diameters_np.mean(),drop_diameters_np.std()]) 
+				my_drop_diameters_std.append(self.canny_data[l_count][3])
+				l_count += 1
+		
+		my_drop_diameters_std = set(my_drop_diameters_std)
+		my_drop_diameters_stdn = sorted(my_drop_diameters_std)
+		self.pruned_canny_data = []
+		self.canny_best_std = []
+		#extracts best canny weight combinations based on the standard deviation 
+		for l in range(len(self.canny_data)):
+			if self.canny_data[l][3] <= my_drop_diameters_stdn[0]:
+				self.canny_best_std.append(self.canny_data[l])
+			if self.canny_data[l][3] <= my_drop_diameters_stdn[max_std]:
+				self.pruned_canny_data.append(self.canny_data[l])
+		for l in range(len(self.pruned_canny_data)):
+			print(self.pruned_canny_data[l])
+		#Runs all the best parameters one last time to update the output for GUI
+		self.canny_weights=[self.canny_best_std[0][0],self.canny_best_std[0][1]]
+		print("Best Fine-Tuned Canny Weights: " + str(self.canny_weights[0]) + " " + str(self.canny_weights[1]))
+		self.createWave()
+		self.smoothWave()
+		self.getWaveMaxes()
+		self.getDropRate()
+		self.getAllDiameters()
+		self.writeOutputs()
 
 
 
@@ -989,4 +1064,4 @@ class AnalysisGUI:
 
 
 #Commands to run when script is called
-SetupGUI(sys.argv[1] if len(sys.argv)>1 else "", sys.argv[2] if len(sys.argv)>2 else "", sys.argv[3] if len(sys.argv)>3 else "")
+SetupGUI(sys.argv[1] if len(sys.argv)>1 else "", sys.argv[2] if len(sys.argv)>2 else "", sys.argv[3] if len(sys.argv)>3 else "", sys.argv[4] if len(sys.argv)>4 else "")
