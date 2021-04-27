@@ -84,6 +84,7 @@ Valid filter options are:
 * truncate
 * binary
 * tozero
+
 Example. ```python3 uDROP_Generation.py videos/clear.mpg filter {binary}```
 will apply the binary filter to the video named 'clear.mpg'.
 If {filter_type} is omitted, the application will default to the 'truncate' filter.
