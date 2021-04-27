@@ -76,6 +76,18 @@ The BibTex is included here:
   * Your results should be in files in the folder in addition to appearing on the command line and on the GUI
   * Read the wiki for more information on these outputs.
 
+# Advanced Options
+Sometimes, especially with videos that contain droplets which are clear or tightly packed together, the applications may have a hard time identifying the droplets. In order to mitigate this issue, optional filters may be applied using the following command.
+```python3 uDROP_Generation.py {/path/to/video.mpg} filter {filter_type}```
+This will apply a filter to the video which will highlight the droplet edges before uDROP begins processing it.
+Valid filter options are:
+* truncate
+* binary
+* tozero
+Example. ```python3 uDROP_Generation.py videos/clear.mpg filter {binary}```
+will apply the binary filter to the video named 'clear.mpg'.
+If {filter_type} is omitted, the application will default to the 'truncate' filter.
+
 ## Wiki
 * [Inputs/Usage](https://github.com/CIDARLAB/droplet-image-processing/wiki/Generation-Inputs-and-Usage)
 * [Outputs](https://github.com/CIDARLAB/droplet-image-processing/wiki/Generation-Outputs)
