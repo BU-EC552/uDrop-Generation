@@ -1,8 +1,8 @@
-*.mov
+#*.mov
 *.pyc
 *.spec
 *.avi
-*.mp4
+#*.mp4
 *.swp
 frames/
 output/

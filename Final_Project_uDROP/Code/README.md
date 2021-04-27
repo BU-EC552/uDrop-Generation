@@ -1,5 +1,7 @@
 # uDrop-Generation
 
+EXAMPLE VIDEOS THAT CAN BE USED ARE IN THE example_videos FOLDER
+
 # Overview
 This program analyzes the rate and sizes of droplets produced from a microfluidic droplet generator from a high-speed video. The user inputs the general regions of droplet activity in the video and then gets the drop generation rate and average size of each droplet for droplet generation videos.
 
